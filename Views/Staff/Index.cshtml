@@ -1,0 +1,139 @@
+@model List<LaundryMVC.Models.Order>
+@using LaundryMVC.Models
+@{
+    ViewData["Title"] = "Staff Dashboard Queue";
+    Layout = "_Layout";
+    var name = ViewBag.FullName ?? User.Identity!.Name;
+
+    var totalOrders = Model.Count;
+    var activeOrders = Model.Count(o => o.Status != OrderStages.Delivered.ToString() && o.Status != OrderStages.Cancelled.ToString());
+    var readyCount = Model.Count(o => o.Status == OrderStages.ReadyForDelivery.ToString());
+    var deliveredCount = Model.Count(o => o.Status == OrderStages.Delivered.ToString());
+}
+
+<div class="page-head">
+    <div>
+        <h1>Staff Queue Control Panel</h1>
+        <div class="sub">Welcome back, <strong>@name</strong>. Manage active laundry orders and advance stage pipelines.</div>
+    </div>
+</div>
+
+<div class="kpis">
+    <div class="kpi">
+        <div class="icon">📦</div>
+        <div>
+            <div class="v">@totalOrders</div>
+            <div class="l">Total Orders</div>
+        </div>
+    </div>
+    <div class="kpi warn">
+        <div class="icon">⏳</div>
+        <div>
+            <div class="v">@activeOrders</div>
+            <div class="l">Active Queue</div>
+        </div>
+    </div>
+    <div class="kpi good">
+        <div class="icon">🚚</div>
+        <div>
+            <div class="v">@readyCount</div>
+            <div class="l">Ready for Delivery</div>
+        </div>
+    </div>
+    <div class="kpi">
+        <div class="icon">✅</div>
+        <div>
+            <div class="v">@deliveredCount</div>
+            <div class="l">Delivered</div>
+        </div>
+    </div>
+</div>
+
+<section class="card">
+    <h2>All Laundry Orders Queue</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="empty">
+            <div class="ico">📋</div>
+            No orders in the queue right now.
+        </div>
+    }
+    else
+    {
+        <table class="list">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">QR</th>
+                    <th>Order & Customer</th>
+                    <th>Status</th>
+                    <th>Pickup Details</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th style="width: 210px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    Enum.TryParse<OrderStages>(order.Status, out var currentStage);
+                    var isFinal = currentStage == OrderStages.Delivered || currentStage == OrderStages.Cancelled;
+                    var nextStage = isFinal ? currentStage : currentStage + 1;
+
+                    <tr id="staff-row-@order.Id">
+                        <td>
+                            @if (!string.IsNullOrEmpty(order.QrPngBase64))
+                            {
+                                <img src="@order.QrPngBase64" class="qr" style="width: 48px; height: 48px;" alt="QR" title="@order.QrToken" />
+                            }
+                        </td>
+                        <td>
+                            <div style="font-weight: 700;">Order #@order.Id</div>
+                            <div style="font-size: 0.85rem; color: var(--muted);">@order.CustomerName</div>
+                            <div style="font-size: 0.72rem; font-family: monospace; color: var(--muted);">@order.QrToken</div>
+                        </td>
+                        <td>
+                            <span class="badge stage-@order.Status" id="order-badge-@order.Id">@order.Status</span>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.85rem;">📍 @order.PickupAddress</div>
+                            <div style="font-size: 0.78rem; color: var(--muted);">🕒 @order.PickupAt.ToLocalTime().ToString("MMM dd, HH:mm")</div>
+                        </td>
+                        <td>
+                            <ul class="items-list" style="font-size: 0.82rem; margin: 0; padding-left: 1rem;">
+                                @foreach (var item in order.Items)
+                                {
+                                    <li>@item.ServiceName (x@item.Quantity)</li>
+                                }
+                            </ul>
+                        </td>
+                        <td style="font-weight: 700; color: var(--primary);">
+                            $@order.Total.ToString("F2")
+                        </td>
+                        <td>
+                            <div class="actions">
+                                @if (!isFinal)
+                                {
+                                    <form method="post" action="/Staff/Advance/@order.Id" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn primary sm" type="submit">
+                                            Next &rarr; @nextStage
+                                        </button>
+                                    </form>
+                                    <form method="post" action="/Staff/Cancel/@order.Id" class="inline" onsubmit="return confirm('Are you sure you want to cancel Order #@order.Id?');">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn danger sm" type="submit">Cancel</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 0.8rem; color: var(--muted);">Completed</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>

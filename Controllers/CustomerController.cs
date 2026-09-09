@@ -1,0 +1,105 @@
+using LaundryMVC.Data;
+using LaundryMVC.Models;
+using LaundryMVC.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace LaundryMVC.Controllers;
+
+[Authorize(Roles = "Customer")]
+public class CustomerController : Controller
+{
+    private readonly AppDbContext _db;
+    private readonly UserManager<AppUser> _userManager;
+    private readonly IQrCodeService _qrCodeService;
+
+    public CustomerController(AppDbContext db, UserManager<AppUser> userManager, IQrCodeService qrCodeService)
+    {
+        _db = db;
+        _userManager = userManager;
+        _qrCodeService = qrCodeService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Index()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction("Index", "Home");
+
+        var orders = await _db.Orders
+            .Include(o => o.Items)
+            .Where(o => o.CustomerId == user.Id)
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+        ViewBag.FullName = user.FullName;
+        ViewBag.CustomerId = user.Id;
+        return View(orders);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Book(BookOrderViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction("Index", "Home");
+
+        // Filter out empty items
+        var validItems = model.Items?
+            .Where(i => !string.IsNullOrWhiteSpace(i.ServiceName) && i.Quantity > 0 && i.UnitPrice >= 0)
+            .ToList() ?? new List<BookOrderItemInputModel>();
+
+        if (!validItems.Any())
+        {
+            TempData["Message"] = "Please add at least one valid laundry item to your order.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var subtotal = validItems.Sum(i => i.UnitPrice * i.Quantity);
+        var hasCoupon = !string.IsNullOrWhiteSpace(model.Coupon);
+        var discount = hasCoupon ? Math.Round(subtotal * 0.10m, 2) : 0m;
+        var total = subtotal - discount;
+
+        var order = new Order
+        {
+            CustomerId = user.Id,
+            CustomerName = string.IsNullOrWhiteSpace(user.FullName) ? user.UserName ?? "Customer" : user.FullName,
+            PickupAddress = model.PickupAddress ?? "Store Pickup",
+            PickupAt = model.PickupAt,
+            Notes = model.Notes,
+            Subtotal = subtotal,
+            Discount = discount,
+            Total = total,
+            Status = OrderStages.Created.ToString(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _db.Orders.Add(order);
+        await _db.SaveChangesAsync();
+
+        // Mint QR Token & PNG Image
+        var (token, base64Png) = _qrCodeService.GenerateQr(order.Id);
+        order.QrToken = token;
+        order.QrPngBase64 = base64Png;
+
+        // Add order items
+        foreach (var item in validItems)
+        {
+            order.Items.Add(new OrderItem
+            {
+                OrderId = order.Id,
+                ServiceName = item.ServiceName.Trim(),
+                UnitPrice = item.UnitPrice,
+                Quantity = item.Quantity
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        TempData["Message"] = $"Order #{order.Id} placed successfully!";
+        return RedirectToAction(nameof(Index));
+    }
+}

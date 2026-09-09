@@ -1,0 +1,49 @@
+@model LaundryMVC.Models.LoginForm
+@using LaundryMVC.Models
+@{
+    ViewData["Title"] = "Welcome";
+    Layout = "_Layout";
+
+    var form = Model ?? new LoginForm();
+    var reg = ViewBag.Register as RegisterForm ?? new RegisterForm();
+    var showRegister = (bool)(ViewBag.ShowRegister ?? false);
+}
+<div class="auth-wrap">
+    <div class="card auth-card @(showRegister ? "show-reg" : "show-login")" id="authCard">
+        <div class="tabs">
+            <button type="button" data-tab="login" class="@(!showRegister ? "on" : null)">Log in</button>
+            <button type="button" data-tab="register" class="@(showRegister ? "on" : null)">Register</button>
+        </div>
+
+        <!-- Login -->
+        <form method="post" action="/Home/Login" class="pane login @(showRegister ? "hide" : null)">
+            @Html.AntiForgeryToken()
+            <label>Email <input name="Email" type="email" required value="@form.Email" /></label>
+            <label>Password <input name="Password" type="password" required /></label>
+            <button class="btn primary" type="submit">Log in</button>
+        </form>
+
+        <!-- Register -->
+        <form method="post" action="/Home/Register" class="pane register @(!showRegister ? "hide" : null)">
+            @Html.AntiForgeryToken()
+            <label>Full name <input name="FullName" required value="@reg.FullName" /></label>
+            <label>Email <input name="Email" type="email" required value="@reg.Email" /></label>
+            <label>Password <input name="Password" type="password" required minlength="6" /></label>
+            <button class="btn primary" type="submit">Create account</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.tabs [data-tab]').forEach(b => {
+        b.addEventListener('click', () => {
+            const card = document.getElementById('authCard');
+            const tab = b.dataset.tab;
+            card.classList.toggle('show-reg', tab === 'register');
+            card.classList.toggle('show-login', tab === 'login');
+            card.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+            card.querySelectorAll('.pane').forEach(p => p.classList.add('hide'));
+            card.querySelector('.' + tab).classList.remove('hide');
+        });
+    });
+</script>

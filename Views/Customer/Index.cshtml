@@ -1,0 +1,162 @@
+@model List<LaundryMVC.Models.Order>
+@{
+    ViewData["Title"] = "Customer Dashboard";
+    Layout = "_Layout";
+    var name = ViewBag.FullName ?? User.Identity!.Name;
+    var customerId = ViewBag.CustomerId as string ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Customer Dashboard</h1>
+        <div class="sub">Welcome back, <strong>@name</strong>. Place a pickup order or track your active orders below.</div>
+    </div>
+</div>
+
+<div class="grid two">
+    <!-- Booking Form -->
+    <section class="card">
+        <h2>Book New Laundry Order</h2>
+        <form method="post" action="/Customer/Book">
+            @Html.AntiForgeryToken()
+            <div class="row">
+                <label>Pickup Address
+                    <input name="PickupAddress" required placeholder="e.g. Block C, Room 302, University Hall" />
+                </label>
+            </div>
+            <div class="row two">
+                <label>Pickup Date & Time
+                    <input name="PickupAt" type="datetime-local" required value="@DateTime.Now.AddHours(2).ToString("yyyy-MM-ddTHH:mm")" />
+                </label>
+                <label>Coupon Code (Optional)
+                    <input name="Coupon" placeholder="e.g. LAUNDRY10 (10% off)" />
+                </label>
+            </div>
+            <div class="row">
+                <label>Special Instructions / Notes
+                    <input name="Notes" placeholder="e.g. Separate white clothes, extra softener" />
+                </label>
+            </div>
+
+            <h3 style="font-size: 0.95rem; margin-top: 1.2rem; margin-bottom: 0.5rem;">Select Laundry Items</h3>
+            <table class="items" id="itemsTable">
+                <thead>
+                    <tr>
+                        <th>Service / Item</th>
+                        <th style="width: 110px;">Price ($)</th>
+                        <th style="width: 90px;">Qty</th>
+                        <th style="width: 40px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <tr>
+                        <td><input name="Items[0].ServiceName" required value="Shirt Wash & Iron" placeholder="Service name" /></td>
+                        <td><input name="Items[0].UnitPrice" type="number" step="0.5" required value="2.50" /></td>
+                        <td><input name="Items[0].Quantity" type="number" min="1" required value="2" /></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td><input name="Items[1].ServiceName" value="Pants / Jeans Dry Clean" placeholder="Service name" /></td>
+                        <td><input name="Items[1].UnitPrice" type="number" step="0.5" value="4.00" /></td>
+                        <td><input name="Items[1].Quantity" type="number" min="1" value="1" /></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 0.6rem; display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn ghost sm" id="addRowBtn">+ Add another item</button>
+            </div>
+
+            <div style="margin-top: 1.4rem;">
+                <button class="btn primary block" type="submit">Submit Order & Mint QR Code</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Order History -->
+    <section class="card">
+        <h2>Your Orders History</h2>
+        @if (!Model.Any())
+        {
+            <div class="empty">
+                <div class="ico">🧺</div>
+                No laundry orders placed yet. Submit your first order on the left!
+            </div>
+        }
+        else
+        {
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                @foreach (var order in Model)
+                {
+                    <div class="card" style="border: 1px solid var(--line); background: #fafafa; padding: 1rem;" id="order-card-@order.Id">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.05rem;">
+                                    Order #@order.Id 
+                                    <span class="badge stage-@order.Status" id="order-badge-@order.Id">@order.Status</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem;">
+                                    Placed: @order.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy HH:mm")
+                                </div>
+                                <div style="font-size: 0.85rem; margin-top: 0.4rem;">
+                                    📍 <strong>Pickup:</strong> @order.PickupAddress (@order.PickupAt.ToLocalTime().ToString("MMM dd, HH:mm"))
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(order.QrPngBase64))
+                            {
+                                <div style="text-align: center;">
+                                    <img src="@order.QrPngBase64" class="qr" alt="QR Code" title="@order.QrToken" />
+                                    <div style="font-size: 0.65rem; font-family: monospace; color: var(--muted); margin-top: 0.2rem;">@order.QrToken</div>
+                                </div>
+                            }
+                        </div>
+
+                        <div style="margin-top: 0.8rem; border-top: 1px dashed var(--line); padding-top: 0.6rem;">
+                            <ul class="items-list" style="font-size: 0.85rem; margin: 0; padding-left: 1.2rem;">
+                                @foreach (var item in order.Items)
+                                {
+                                    <li>@item.ServiceName x @item.Quantity — $@((item.UnitPrice * item.Quantity).ToString("F2")) ($@item.UnitPrice ea)</li>
+                                }
+                            </ul>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; font-weight: 600;">
+                                <span style="font-size: 0.82rem; color: var(--muted);">
+                                    Subtotal: $@order.Subtotal.ToString("F2")
+                                    @if (order.Discount > 0)
+                                    {
+                                        <span> | Discount: -$@order.Discount.ToString("F2")</span>
+                                    }
+                                </span>
+                                <span style="font-size: 1.05rem; color: var(--primary);">Total: $@order.Total.ToString("F2")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let itemCount = 2;
+        const addRowBtn = document.getElementById('addRowBtn');
+        const itemsBody = document.getElementById('itemsBody');
+
+        if (addRowBtn && itemsBody) {
+            addRowBtn.addEventListener('click', () => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input name="Items[${itemCount}].ServiceName" placeholder="Service name" /></td>
+                    <td><input name="Items[${itemCount}].UnitPrice" type="number" step="0.5" value="3.00" /></td>
+                    <td><input name="Items[${itemCount}].Quantity" type="number" min="1" value="1" /></td>
+                    <td><button type="button" class="btn danger sm" onclick="this.closest('tr').remove()">&times;</button></td>
+                `;
+                itemsBody.appendChild(tr);
+                itemCount++;
+            });
+        }
+
+        // Store customer ID globally for SignalR hub connection
+        window.__customerId = "@customerId";
+    });
+</script>

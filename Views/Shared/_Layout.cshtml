@@ -1,0 +1,52 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<LaundryMVC.Models.AppUser> Users
+@{
+    var fullName = User.Identity?.IsAuthenticated == true
+        ? (await Users.GetUserAsync(User))?.FullName ?? User.Identity!.Name
+        : null;
+    var role = User.IsInRole("Staff") ? "Staff"
+             : User.IsInRole("Customer") ? "Customer"
+             : null;
+    var roleClass = role?.ToLowerInvariant();
+    var initial = string.IsNullOrWhiteSpace(fullName) ? "?" : fullName![0].ToString().ToUpperInvariant();
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Smart Laundry</title>
+    <link rel="stylesheet" href="~/css/style.css" asp-append-version="true" />
+</head>
+<body class="layout-topbar">
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <header class="topbar">
+        <a class="brand" href="/">Smart Laundry</a>
+        <nav class="nav">
+            <a href="/Home/Dashboard">Dashboard</a>
+        </nav>
+        <div class="userbox">
+            <div class="avatar role-@roleClass sm">@initial</div>
+            <span class="who">@fullName <em>- @role</em></span>
+            <form method="post" action="/Home/Logout" class="inline">
+                @Html.AntiForgeryToken()
+                <button class="btn ghost" type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
+}
+
+<main class="container">
+    @if (TempData["Message"] is string msg)
+    {
+        <div class="flash">@msg</div>
+    }
+    @RenderBody()
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="~/js/customer.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

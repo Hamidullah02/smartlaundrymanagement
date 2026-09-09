@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "_Layout";
+    var role = User.IsInRole("Staff") ? "Staff"
+             : User.IsInRole("Customer") ? "Customer"
+             : "Guest";
+    var name = ViewBag.FullName ?? User.Identity!.Name;
+    var greeting = DateTime.Now.Hour < 12 ? "Good morning"
+                 : DateTime.Now.Hour < 18 ? "Good afternoon"
+                 : "Good evening";
+}
+
+<section class="hero">
+    <h1>@greeting, @name</h1>
+    <p class="muted">You're signed in as <strong>@role</strong>. Pick a dashboard below.</p>
+    <div class="cta">
+        @if (role == "Customer")
+        {
+            <a class="btn primary" href="/Customer">Customer dashboard</a>
+        }
+        else if (role == "Staff")
+        {
+            <a class="btn primary" href="/Staff">Staff dashboard</a>
+        }
+    </div>
+</section>

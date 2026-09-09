@@ -1,0 +1,11 @@
+@{
+    ViewData["Title"] = "Error";
+    Layout = "_Layout";
+    var status = (int?)ViewBag.StatusCode ?? 500;
+    var message = (string?)ViewBag.Message ?? "Something went wrong.";
+}
+<section class="hero">
+    <h1>Error @status</h1>
+    <p class="muted">@message</p>
+    <div class="cta"><a class="btn primary" href="/">Back to home</a></div>
+</section>

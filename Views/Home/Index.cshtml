@@ -18,6 +18,7 @@
         <!-- Login -->
         <form method="post" action="/Home/Login" class="pane login @(showRegister ? "hide" : null)">
             @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
             <label>Email <input name="Email" type="email" required value="@form.Email" /></label>
             <label>Password <input name="Password" type="password" required /></label>
             <button class="btn primary" type="submit">Log in</button>
@@ -26,6 +27,7 @@
         <!-- Register -->
         <form method="post" action="/Home/Register" class="pane register @(!showRegister ? "hide" : null)">
             @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
             <label>Full name <input name="FullName" required value="@reg.FullName" /></label>
             <label>Email <input name="Email" type="email" required value="@reg.Email" /></label>
             <label>Password <input name="Password" type="password" required minlength="6" /></label>

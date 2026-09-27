@@ -1,0 +1,71 @@
+@model LaundryMVC.Models.AdminUsersViewModel
+@{
+    ViewData["Title"] = "User Management";
+    Layout = "_Layout";
+}
+
+<div class="page-head">
+    <div>
+        <h1>User management</h1>
+        <div class="sub">Create staff accounts and manage Customer or Staff access.</div>
+    </div>
+    <a class="btn ghost" href="/Admin">Back to administration</a>
+</div>
+
+<div asp-validation-summary="All" class="validation-summary"></div>
+
+<section class="card admin-section">
+    <h2>Create staff account</h2>
+    <form method="post" action="/Admin/CreateStaff" class="admin-form">
+        @Html.AntiForgeryToken()
+        <label>Full name<input name="FullName" value="@Model.NewStaff.FullName" required maxlength="100" /></label>
+        <label>Email<input name="Email" type="email" value="@Model.NewStaff.Email" required /></label>
+        <label>Temporary password<input name="Password" type="password" required minlength="6" autocomplete="new-password" /></label>
+        <button class="btn primary" type="submit">Create staff ID</button>
+    </form>
+</section>
+
+<section class="card admin-section">
+    <h2>Accounts <span class="muted">(@Model.Users.Count)</span></h2>
+    <div class="table-scroll">
+        <table class="list">
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Access</th></tr></thead>
+            <tbody>
+            @foreach (var user in Model.Users)
+            {
+                <tr>
+                    <td>@user.FullName</td>
+                    <td>@user.Email</td>
+                    <td>@user.Role</td>
+                    <td>@(user.IsActive ? "Active" : "Deactivated")</td>
+                    <td>
+                        @if (user.Role == "Admin")
+                        {
+                            <span>Administrator account protected</span>
+                        }
+                        else
+                        {
+                            <div class="user-actions">
+                                <form method="post" action="/Admin/SetUserRole" class="role-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <select name="role" aria-label="Role for @user.Email">
+                                        <option value="Customer" selected="@(user.Role == "Customer")">Customer</option>
+                                        <option value="Staff" selected="@(user.Role == "Staff")">Staff</option>
+                                    </select>
+                                    <button class="btn ghost sm" type="submit">Save role</button>
+                                </form>
+                                <form method="post" action="/Admin/ToggleUserStatus">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@user.Id" />
+                                    <button class="btn @(user.IsActive ? "danger" : "primary") sm" type="submit">@(user.IsActive ? "Deactivate" : "Reactivate")</button>
+                                </form>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

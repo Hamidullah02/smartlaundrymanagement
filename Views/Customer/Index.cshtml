@@ -4,6 +4,7 @@
     Layout = "_Layout";
     var name = ViewBag.FullName ?? User.Identity!.Name;
     var customerId = ViewBag.CustomerId as string ?? "";
+    var services = ViewBag.Services as List<LaundryMVC.Models.ServiceCatalogItem> ?? new();
 }
 
 <div class="page-head">
@@ -39,6 +40,10 @@
             </div>
 
             <h3 style="font-size: 0.95rem; margin-top: 1.2rem; margin-bottom: 0.5rem;">Select Laundry Items</h3>
+            @if (!services.Any())
+            {
+                <p>No active services are available yet. Please contact staff.</p>
+            }
             <table class="items" id="itemsTable">
                 <thead>
                     <tr>
@@ -50,25 +55,47 @@
                 </thead>
                 <tbody id="itemsBody">
                     <tr>
-                        <td><input name="Items[0].ServiceName" required value="Shirt Wash & Iron" placeholder="Service name" /></td>
-                        <td><input name="Items[0].UnitPrice" type="number" step="0.5" required value="2.50" /></td>
+                        <td>
+                            <select name="Items[0].ServiceId" required>
+                                <option value="">Choose a service</option>
+                                @foreach (var service in services)
+                                {
+                                    <option value="@service.Id">@service.Name - $@service.Price.ToString("F2")</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="service-price">--</td>
                         <td><input name="Items[0].Quantity" type="number" min="1" required value="2" /></td>
                         <td></td>
                     </tr>
                     <tr>
-                        <td><input name="Items[1].ServiceName" value="Pants / Jeans Dry Clean" placeholder="Service name" /></td>
-                        <td><input name="Items[1].UnitPrice" type="number" step="0.5" value="4.00" /></td>
+                        <td>
+                            <select name="Items[1].ServiceId">
+                                <option value="">Choose a service</option>
+                                @foreach (var service in services)
+                                {
+                                    <option value="@service.Id">@service.Name - $@service.Price.ToString("F2")</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="service-price">--</td>
                         <td><input name="Items[1].Quantity" type="number" min="1" value="1" /></td>
                         <td></td>
                     </tr>
                 </tbody>
             </table>
+            <template id="serviceOptionTemplate">
+                @foreach (var service in services)
+                {
+                    <option value="@service.Id">@service.Name - $@service.Price.ToString("F2")</option>
+                }
+            </template>
             <div style="margin-top: 0.6rem; display: flex; justify-content: space-between; align-items: center;">
                 <button type="button" class="btn ghost sm" id="addRowBtn">+ Add another item</button>
             </div>
 
             <div style="margin-top: 1.4rem;">
-                <button class="btn primary block" type="submit">Submit Order & Mint QR Code</button>
+                <button class="btn primary block" type="submit" disabled="@(services.Count == 0)">Submit Order & Mint QR Code</button>
             </div>
         </form>
     </section>
@@ -141,13 +168,25 @@
         let itemCount = 2;
         const addRowBtn = document.getElementById('addRowBtn');
         const itemsBody = document.getElementById('itemsBody');
+        const serviceOptionTemplate = document.getElementById('serviceOptionTemplate');
+
+        const updatePrice = select => {
+            const priceCell = select.closest('tr').querySelector('.service-price');
+            const option = select.selectedOptions[0];
+            const match = option?.textContent.match(/\$([\d.]+)$/);
+            priceCell.textContent = match ? `$${Number(match[1]).toFixed(2)}` : '--';
+        };
+
+        itemsBody?.addEventListener('change', event => {
+            if (event.target.matches('select[name$=".ServiceId"]')) updatePrice(event.target);
+        });
 
         if (addRowBtn && itemsBody) {
             addRowBtn.addEventListener('click', () => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><input name="Items[${itemCount}].ServiceName" placeholder="Service name" /></td>
-                    <td><input name="Items[${itemCount}].UnitPrice" type="number" step="0.5" value="3.00" /></td>
+                    <td><select name="Items[${itemCount}].ServiceId"><option value="">Choose a service</option>${serviceOptionTemplate.innerHTML}</select></td>
+                    <td class="service-price">--</td>
                     <td><input name="Items[${itemCount}].Quantity" type="number" min="1" value="1" /></td>
                     <td><button type="button" class="btn danger sm" onclick="this.closest('tr').remove()">&times;</button></td>
                 `;
@@ -155,6 +194,8 @@
                 itemCount++;
             });
         }
+
+        itemsBody?.querySelectorAll('select[name$=".ServiceId"]').forEach(updatePrice);
 
         // Store customer ID globally for SignalR hub connection
         window.__customerId = "@customerId";

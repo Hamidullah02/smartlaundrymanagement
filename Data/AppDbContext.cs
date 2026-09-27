@@ -10,6 +10,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
 
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<ServiceCatalogItem> ServiceCatalog => Set<ServiceCatalogItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -17,9 +18,11 @@ public class AppDbContext : IdentityDbContext<AppUser>
 
         builder.Entity<Order>(entity =>
         {
+            entity.Property(o => o.QrToken).IsRequired(false);
+            entity.Property(o => o.QrPngBase64).IsRequired(false);
             entity.HasIndex(o => o.QrToken).IsUnique();
             entity.HasIndex(o => o.Status);
             entity.HasIndex(o => o.CustomerId);
         });
     }
-}
+}

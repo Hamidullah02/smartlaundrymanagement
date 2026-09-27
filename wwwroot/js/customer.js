@@ -5,7 +5,7 @@
     window.__csrf = tokenMeta ? tokenMeta.value : '';
 
     // 2. Initialize SignalR Connection if library is available
-    if (typeof signalR !== 'undefined') {
+    if (typeof signalR !== 'undefined' && document.querySelector('[id^="order-badge-"]')) {
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/hubs/orders")
             .withAutomaticReconnect()

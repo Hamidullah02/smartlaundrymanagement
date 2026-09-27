@@ -1,159 +1,67 @@
-# Smart Laundry — University Project (Simplified)
+# Smart Laundry Management
 
-A minimal **ASP.NET Core 8 MVC** monolith for a small laundry business. Built for a
-university coursework submission: no tests, no production hardening, just a clear
-end-to-end feature that runs out of the box.
+ASP.NET Core 8 MVC application for laundry pickup orders, staff processing, service catalog management, and administration.
 
-## What it does
+## Features
 
-- Customers sign in, place a pickup order, and watch its status update live.
-- Staff sign in, see a queue of all orders, and click **Next** to advance an order
-  through the stages.
-- Both roles land on a **blank Dashboard** after login (only the top nav is shown).
-- Each order gets a unique QR code (`LMS-ORD-{id}-{guid}`) rendered server-side.
+- Customers register, choose active catalog services, submit pickup orders, and track order status with QR codes and SignalR updates.
+- Staff process the shared order queue, advance order stages, and cancel orders.
+- Admins view revenue and order-status analytics, manage customer/staff access, create staff accounts, manage the service catalog, and export CSV data.
 
-## Stage pipeline
+## Roles and pages
 
-`Created → Received → Washing → Drying → Ironing → QualityCheck → ReadyForDelivery → Delivered`
-(or `Cancelled` from any active stage).
+| Role | Access |
+| --- | --- |
+| Customer | `/Customer` for booking and order history |
+| Staff | `/Staff` for the order queue |
+| Admin | `/Admin` for analytics and management; also `/Staff` for the queue |
 
-When staff advances a stage the server pushes `OrderStatusChanged` over SignalR
-to the customer's browser.
+New public registrations receive the Customer role. Staff accounts can be created by an Admin. Admin accounts cannot be created through public registration.
 
-## Tech stack
+## Run locally
 
-| Concern        | Choice                                                    |
-| -------------- | --------------------------------------------------------- |
-| Web            | ASP.NET Core 8 MVC + Razor                                |
-| Auth           | ASP.NET Core Identity (cookie) — two roles: `Customer`, `Staff` |
-| Persistence    | EF Core 8.0.8 + SQLite (`laundry.db` auto-created)        |
-| Real-time      | SignalR at `/hubs/orders`                                 |
-| QR codes       | QRCoder 1.6.0                                             |
-| Client JS      | Vanilla + `@microsoft/signalr` from CDN                   |
+Requirements: .NET SDK 8 or a compatible newer SDK.
 
-No CORS, no JWT, no client framework, no email/WhatsApp/PDF/file uploads.
-
-## Folder layout (every file that matters)
-
-```
-LaundryMVC/
-├── Program.cs                  Composition root — DI, middleware, routes, hub map
-├── appsettings.json            Connection string + shop name only
-├── LaundryMVC.csproj           Just the four NuGet refs we actually use
-├── Properties/launchSettings.json   Auto-launches browser at http://localhost:5000
-│
-├── Models/Models.cs            AppUser, Order, OrderItem, OrderStages, forms
-├── Data/AppDbContext.cs        IdentityDbContext + Orders + OrderItems + indexes
-├── Data/DbSeeder.cs            Roles + default staff/admin account
-│
-├── Services/QrCodeService.cs   Generates (token, base64 PNG)
-├── Hubs/OrderHub.cs            Single JoinGroup(string groupName) method
-│
-├── Controllers/
-│   ├── HomeController.cs       Index (login+register), Login, Register, Logout, Dashboard
-│   ├── CustomerController.cs   [Customer] Index (history) + Book
-│   └── StaffController.cs      [Staff] Index (queue) + Advance + Cancel
-│
-├── Views/
-│   ├── _ViewImports.cshtml / _ViewStart.cshtml
-│   ├── Shared/_Layout.cshtml   Top nav with role-aware links + logout
-│   ├── Home/Index.cshtml       Login + Register tabs (single card)
-│   ├── Home/Dashboard.cshtml   Blank welcome screen (both roles)
-│   ├── Customer/Index.cshtml   Booking form + order history
-│   └── Staff/Index.cshtml      Queue with Next / Cancel buttons
-│
-└── wwwroot/
-    ├── css/style.css           Single CSS file (≈200 lines)
-    └── js/customer.js          Tiny SignalR bootstrap + toast
-```
-
-## Database — visible at a glance
-
-SQLite creates `laundry.db` on first run. The schema is just **five tables**:
-
-```
-AspNetUsers         (from Identity)
-   └─ FullName, Email, ...
-
-Orders
-   Id              int PK
-   CustomerId      nvarchar  → AspNetUsers.Id
-   CustomerName    nvarchar        ← denormalised for fast queue display
-   Status          nvarchar        ← current stage
-   PickupAddress   nvarchar
-   PickupAt        datetime
-   Notes           nvarchar
-   Subtotal        decimal
-   Discount        decimal
-   Total           decimal
-   QrToken         nvarchar UNIQUE
-   QrPngBase64     nvarchar        ← base64 PNG
-   CreatedAt       datetime
-   UpdatedAt       datetime
-
-OrderItems
-   Id              int PK
-   OrderId         int FK → Orders (cascade delete)
-   ServiceName     nvarchar
-   UnitPrice       decimal
-   Quantity        int
-```
-
-Indexes (declared in `AppDbContext.OnModelCreating`):
-`Orders.QrToken` UNIQUE · `Orders.Status` · `Orders.CustomerId`.
-
-There is **no** Service catalogue, Coupon, Review, Delivery, Employee, or
-File table — those features were intentionally dropped to keep the schema
-readable for a uni submission. Coupons are honoured with a flat 10 % discount
-when the booking form's `Coupon` field is filled in.
-
-## Default account
-
-| Email                  | Password       | Role  |
-| ---------------------- | -------------- | ----- |
-| `admin@laundry.local`  | `Admin@123456` | Staff |
-
-Customers register from the home page.
-
-## How to run
-
-```bash
-cd LaundryMVC
+```powershell
 dotnet restore
-dotnet run --launch-profile LaundryMVC
+dotnet build
+dotnet run --urls http://localhost:5000
 ```
 
-Then open <http://localhost:5000>. With `launchBrowser: true` in
-`Properties/launchSettings.json`, `dotnet run` will open it automatically.
+Open <http://localhost:5000>. The SQLite database is created as `laundry.db` in the application working directory.
 
-## Demo flow (≈2 minutes)
+## Development accounts
 
-1. Open `/` → **Register** as a customer (e.g. `alice@example.com` / `alice123`).
-2. Land on the Dashboard. Click **My Orders**.
-3. Fill in the booking form: address, time, one item (`Shirt wash`, 2.50, 1),
-   submit. The order appears in the history with a QR code and `Created` badge.
-4. Open a second browser/incognito window → log in as
-   `admin@laundry.local` / `Admin@123456`.
-5. Click **Queue**. Click **Next → Received** on the order. The status badge on
-   the customer's window updates instantly (SignalR).
-6. Repeat to walk it through every stage to **Delivered**, or hit **Cancel**
-   from any stage.
+The seeder creates these accounts when they do not already exist:
 
-## What's deliberately *not* here
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@laundry.local` | `Admin@123456` |
+| Staff | `staff@laundry.local` | `Staff@123456` |
 
-- Admin dashboard (charts, CRUD, account creation) — removed per scope.
-- Email/WhatsApp/PDF invoice/file-upload services — removed per scope.
-- Migrations — schema is created via `EnsureCreated()` so the project runs
-  on a fresh checkout with no extra `dotnet ef` step.
-- Anti-forgery, cookie auth, role-based `[Authorize]` attributes — these
-  *are* here, but they're the only "security" code; there's no rate-limiting,
-  no audit log, no input sanitisation beyond model binding.
-- Tests — none, by design.
+These are development credentials defined in `Data/DbSeeder.cs`. Change them before deploying the application. New customer accounts are created from the registration tab.
 
-## Files a reader should open first
+## Main components
 
-1. `Models/Models.cs` — domain in 100 lines.
-2. `Data/AppDbContext.cs` — schema + indexes.
-3. `Controllers/CustomerController.cs` — booking + QR minting + SignalR push.
-4. `Controllers/StaffController.cs` — queue + advance.
-5. `Program.cs` — composition root.
+- `Program.cs`: dependency injection, Identity, middleware, MVC routes, and SignalR hub.
+- `Models/Models.cs`: users, orders, catalog, form models, and analytics view models.
+- `Data/AppDbContext.cs`: Identity, orders, order items, and service catalog.
+- `Data/DbSeeder.cs`: roles, development accounts, default services, and non-destructive service-table setup.
+- `Controllers/AdminController.cs`: admin analytics, account management, service catalog, and CSV downloads.
+- `Controllers/CustomerController.cs`: customer order history and catalog-priced booking.
+- `Controllers/StaffController.cs`: order queue and status transitions.
+- `Services/QrCodeService.cs`: QR token and PNG generation.
+- `Hubs/OrderHub.cs`: SignalR groups for order status updates.
+
+## Database behavior
+
+EF Core `EnsureCreated` creates the Identity and order schema for a new database. Startup separately creates the `ServiceCatalog` table if it is missing, preserving data in an existing database. Default services are inserted only when the catalog is empty. The application does not use EF migrations.
+
+Each order stores a snapshot of service name and price at booking time. Editing or deactivating a catalog service does not rewrite existing orders. Revenue analytics sum non-cancelled order totals by creation month; the application does not currently track payments or collected revenue.
+
+## Security and deployment notes
+
+- Admin, Staff, and Customer controllers enforce role authorization; form posts use anti-forgery tokens.
+- Admin can change Customer/Staff roles and deactivate/reactivate non-admin accounts. Admin accounts are protected from these user-management actions.
+- Seed passwords are hard-coded for local development. Production deployments should replace the seeding credentials and configure secrets, HTTPS, logging, and operational protections.
+- No payment processing, password-recovery email, audit log, or automated test project is included.

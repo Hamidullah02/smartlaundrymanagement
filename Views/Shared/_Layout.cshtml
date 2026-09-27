@@ -4,7 +4,8 @@
     var fullName = User.Identity?.IsAuthenticated == true
         ? (await Users.GetUserAsync(User))?.FullName ?? User.Identity!.Name
         : null;
-    var role = User.IsInRole("Staff") ? "Staff"
+    var role = User.IsInRole("Admin") ? "Admin"
+             : User.IsInRole("Staff") ? "Staff"
              : User.IsInRole("Customer") ? "Customer"
              : null;
     var roleClass = role?.ToLowerInvariant();
@@ -25,6 +26,19 @@
         <a class="brand" href="/">Smart Laundry</a>
         <nav class="nav">
             <a href="/Home/Dashboard">Dashboard</a>
+            @if (role == "Admin")
+            {
+                <a href="/Admin">Administration</a>
+                <a href="/Staff">Order queue</a>
+            }
+            else if (role == "Staff")
+            {
+                <a href="/Staff">Staff panel</a>
+            }
+            else if (role == "Customer")
+            {
+                <a href="/Customer">Customer panel</a>
+            }
         </nav>
         <div class="userbox">
             <div class="avatar role-@roleClass sm">@initial</div>

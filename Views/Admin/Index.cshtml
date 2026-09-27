@@ -1,0 +1,73 @@
+@model LaundryMVC.Models.AdminDashboardViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "_Layout";
+    var peakRevenue = Model.MonthlyRevenue.Select(month => month.Revenue).DefaultIfEmpty(0).Max();
+}
+
+<div class="page-head">
+    <div>
+        <h1>Administration</h1>
+        <div class="sub">Business performance, account access, and laundry services.</div>
+    </div>
+    <nav class="admin-actions" aria-label="Administration tools">
+        <a class="btn ghost" href="/Admin/Users">Users &amp; staff</a>
+        <a class="btn ghost" href="/Admin/Services">Service catalog</a>
+        <a class="btn primary" href="/Staff">Order queue</a>
+    </nav>
+</div>
+
+<div class="kpis">
+    <div class="kpi good"><div class="icon">$</div><div><div class="v">$@Model.Revenue.ToString("N2")</div><div class="l">Booked revenue</div></div></div>
+    <div class="kpi"><div class="icon">#</div><div><div class="v">@Model.TotalOrders</div><div class="l">Total orders</div></div></div>
+    <div class="kpi warn"><div class="icon">&#8594;</div><div><div class="v">@Model.ActiveOrders</div><div class="l">Active orders</div></div></div>
+    <div class="kpi"><div class="icon">&#9786;</div><div><div class="v">@Model.CustomerCount</div><div class="l">Customers</div></div></div>
+    <div class="kpi"><div class="icon">&#9745;</div><div><div class="v">@Model.StaffCount</div><div class="l">Staff accounts</div></div></div>
+    <div class="kpi good"><div class="icon">&#10003;</div><div><div class="v">@Model.ServiceCount</div><div class="l">Active services</div></div></div>
+</div>
+
+<div class="admin-actions export-actions">
+    <a class="btn ghost" href="/Admin/ExportOrders">Export orders CSV</a>
+    <a class="btn ghost" href="/Admin/ExportUsers">Export users CSV</a>
+    <a class="btn ghost" href="/Admin/ExportServices">Export services CSV</a>
+</div>
+
+<div class="grid two analytics-grid">
+    <section class="card">
+        <h2>Revenue by month</h2>
+        <div class="bar-chart" aria-label="Revenue during the last six months">
+            @foreach (var month in Model.MonthlyRevenue)
+            {
+                var height = peakRevenue > 0 ? Math.Max(4, (double)(month.Revenue / peakRevenue * 100)) : 0;
+                <div class="bar-column" title="@month.Month: $@month.Revenue.ToString("N2") from @month.Orders orders">
+                    <span class="bar-value">$@month.Revenue.ToString("N0")</span>
+                    <div class="bar-track"><div class="bar-fill" style="height:@height.ToString("F0", CultureInfo.InvariantCulture)%"></div></div>
+                    <span class="bar-label">@month.Month</span>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Orders by status</h2>
+        @if (Model.OrdersByStatus.Count == 0)
+        {
+            <p class="muted">No orders have been placed yet.</p>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="list">
+                    <thead><tr><th>Status</th><th>Orders</th></tr></thead>
+                    <tbody>
+                    @foreach (var status in Model.OrdersByStatus)
+                    {
+                        <tr><td>@status.Status</td><td>@status.Count</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LaundryMVC.Controllers;
 
-[Authorize(Roles = "Staff")]
+[Authorize(Roles = "Staff,Admin")]
 public class StaffController : Controller
 {
     private readonly AppDbContext _db;

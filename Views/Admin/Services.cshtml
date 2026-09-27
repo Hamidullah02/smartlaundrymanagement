@@ -1,0 +1,62 @@
+@model List<LaundryMVC.Models.ServiceCatalogItem>
+@{
+    ViewData["Title"] = "Service Catalog";
+    Layout = "_Layout";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Service catalog</h1>
+        <div class="sub">Active services and prices appear in the customer order form.</div>
+    </div>
+    <a class="btn ghost" href="/Admin">Back to administration</a>
+</div>
+
+<section class="card admin-section">
+    <h2>Add a service</h2>
+    <form method="post" action="/Admin/SaveService" class="admin-form service-create-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="0" />
+        <label>Service name<input name="name" required maxlength="100" /></label>
+        <label>Description<input name="description" maxlength="500" /></label>
+        <label>Price<input name="price" type="number" min="0.01" max="100000" step="0.01" required /></label>
+        <button class="btn primary" type="submit">Add service</button>
+    </form>
+</section>
+
+<section class="card admin-section">
+    <h2>Catalog items <span class="muted">(@Model.Count)</span></h2>
+    <div class="table-scroll">
+        <table class="list">
+            <thead><tr><th>Service</th><th>Description</th><th>Price</th><th>Availability</th><th>Actions</th></tr></thead>
+            <tbody>
+            @foreach (var service in Model)
+            {
+                <tr>
+                    <td colspan="3">
+                        <form method="post" action="/Admin/SaveService" class="service-edit-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@service.Id" />
+                            <label class="sr-only" for="service-name-@service.Id">Service name</label>
+                            <input id="service-name-@service.Id" name="name" value="@service.Name" required maxlength="100" />
+                            <label class="sr-only" for="service-description-@service.Id">Description</label>
+                            <input id="service-description-@service.Id" name="description" value="@service.Description" maxlength="500" />
+                            <label class="sr-only" for="service-price-@service.Id">Price</label>
+                            <input id="service-price-@service.Id" name="price" type="number" min="0.01" max="100000" step="0.01" value="@service.Price.ToString("F2")" required />
+                            <button class="btn ghost sm" type="submit">Save</button>
+                        </form>
+                    </td>
+                    <td>@(service.IsActive ? "Active" : "Inactive")</td>
+                    <td>
+                        <form method="post" action="/Admin/ToggleService">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@service.Id" />
+                            <button class="btn @(service.IsActive ? "danger" : "primary") sm" type="submit">@(service.IsActive ? "Deactivate" : "Activate")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

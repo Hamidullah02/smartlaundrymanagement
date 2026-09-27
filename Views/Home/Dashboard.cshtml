@@ -1,7 +1,8 @@
 @{
     ViewData["Title"] = "Dashboard";
     Layout = "_Layout";
-    var role = User.IsInRole("Staff") ? "Staff"
+    var role = User.IsInRole("Admin") ? "Admin"
+             : User.IsInRole("Staff") ? "Staff"
              : User.IsInRole("Customer") ? "Customer"
              : "Guest";
     var name = ViewBag.FullName ?? User.Identity!.Name;
@@ -17,6 +18,11 @@
         @if (role == "Customer")
         {
             <a class="btn primary" href="/Customer">Customer dashboard</a>
+        }
+        else if (role == "Admin")
+        {
+            <a class="btn primary" href="/Admin">Admin dashboard</a>
+            <a class="btn ghost" href="/Staff">Staff order queue</a>
         }
         else if (role == "Staff")
         {

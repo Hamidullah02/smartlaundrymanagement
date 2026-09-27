@@ -80,7 +80,9 @@ public class HomeController : Controller
     [HttpGet]
     public IActionResult Dashboard()
     {
-        var role = User.IsInRole("Staff") ? "Staff" : "Customer";
+        var role = User.IsInRole("Admin") ? "Admin"
+                 : User.IsInRole("Staff") ? "Staff"
+                 : "Customer";
         ViewBag.Role = role;
         ViewBag.FullName = User.FindFirstValue("FullName") ?? User.Identity!.Name;
         return View();

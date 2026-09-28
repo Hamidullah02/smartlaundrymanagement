@@ -18,6 +18,7 @@ builder.Services.AddIdentity<AppUser, IdentityRole>(o =>
     o.Password.RequireLowercase = false;
     o.Password.RequireUppercase = false;
     o.User.RequireUniqueEmail = true;
+    o.SignIn.RequireConfirmedEmail = false;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
@@ -30,6 +31,13 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.ExpireTimeSpan = TimeSpan.FromHours(12);
     o.SlidingExpiration = true;
 });
+
+var emailSettings = builder.Configuration.GetSection("EmailSettings").Get<EmailSettings>() ?? new EmailSettings();
+builder.Services.AddSingleton(emailSettings);
+builder.Services.AddTransient<IEmailSender, MailKitEmailSender>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<OtpService>();
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
@@ -48,4 +56,4 @@ app.UseAuthorization();
 app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
 app.MapHub<OrderHub>("/hubs/orders");
 
-app.Run();
+app.Run();

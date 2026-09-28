@@ -92,6 +92,20 @@ public class RegisterForm
     public string Password { get; set; } = "";
 }
 
+
+public class OtpVerifyForm
+{
+    public string Email { get; set; } = "";
+    public string Code { get; set; } = "";
+    public string Purpose { get; set; } = "register"; // "register" | "reset"
+}
+
+public class ResetPasswordForm
+{
+    public string Email { get; set; } = "";
+    public string Password { get; set; } = "";
+    public string Confirm { get; set; } = "";
+}
 public class CreateStaffForm
 {
     [Required, StringLength(100)]

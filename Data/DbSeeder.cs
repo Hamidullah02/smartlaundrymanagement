@@ -26,6 +26,20 @@ public static class DbSeeder
             );
             """);
 
+        // Idempotent backfill: some Orders rows shipped with NULL timestamps
+        // (CreatedAt/UpdatedAt/PickupAt) which crashes EF materialization.
+        // Replace any NULL with the current UTC instant so existing data loads.
+        // Interpolated below — values come from DateTime.UtcNow, never from user input.
+#pragma warning disable EF1002
+        var nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        await db.Database.ExecuteSqlRawAsync(
+            $"UPDATE \"Orders\" SET \"CreatedAt\" = '{nowIso}' WHERE \"CreatedAt\" IS NULL;");
+        await db.Database.ExecuteSqlRawAsync(
+            $"UPDATE \"Orders\" SET \"UpdatedAt\" = '{nowIso}' WHERE \"UpdatedAt\" IS NULL;");
+        await db.Database.ExecuteSqlRawAsync(
+            $"UPDATE \"Orders\" SET \"PickupAt\"  = '{nowIso}' WHERE \"PickupAt\"  IS NULL;");
+#pragma warning restore EF1002
+
         foreach (var r in new[] { "Admin", "Staff", "Customer" })
             if (!await roles.RoleExistsAsync(r))
                 await roles.CreateAsync(new IdentityRole(r));

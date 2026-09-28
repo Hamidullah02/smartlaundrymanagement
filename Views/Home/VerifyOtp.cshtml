@@ -1,0 +1,55 @@
+@model LaundryMVC.Models.OtpVerifyForm
+@{
+    ViewData["Title"] = "Verify code";
+    Layout = "_Layout";
+    var isReset = Model.Purpose == "reset";
+    var otpOk = (bool)(ViewBag.OtpOk ?? false);
+    var otpError = ViewBag.OtpError as string;
+}
+<div class="auth-wrap">
+    <div class="card auth-card" style="padding:28px;max-width:460px">
+        <h2 style="margin:0 0 6px">Enter the code</h2>
+        <p style="color:#475569;margin:0 0 18px">
+            We sent a 6-digit code to <strong>@Model.Email</strong>.
+            Enter it below to @(isReset ? "reset your password" : "verify your email").
+        </p>
+
+        @if (TempData["Message"] is string msg)
+        {
+            <div class="flash" style="margin-bottom:12px">@msg</div>
+        }
+
+        @if (otpOk)
+        {
+            <div class="flash" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7">
+                ✓ Code sent. Check your inbox (and spam folder).
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(otpError))
+        {
+            <div class="flash" style="background:#fef2f2;color:#991b1b;border-color:#fca5a5">
+                <strong>Email not sent.</strong> @otpError
+            </div>
+        }
+
+        <form method="post" action="/Home/VerifyOtp">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="Email" value="@Model.Email" />
+            <input type="hidden" name="Purpose" value="@Model.Purpose" />
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            <label>Verification code
+                <input name="Code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus
+                       autocomplete="one-time-code"
+                       style="font-size:28px;letter-spacing:8px;text-align:center;font-weight:bold" />
+            </label>
+            <button class="btn primary" type="submit">Verify</button>
+        </form>
+
+        <form method="post" action="/Home/ResendOtp" style="margin-top:14px;text-align:center">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="email" value="@Model.Email" />
+            <input type="hidden" name="purpose" value="@Model.Purpose" />
+            <button class="btn ghost" type="submit">Resend code</button>
+        </form>
+    </div>
+</div>

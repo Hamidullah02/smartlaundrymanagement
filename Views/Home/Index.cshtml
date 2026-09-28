@@ -9,7 +9,7 @@
     var showRegister = (bool)(ViewBag.ShowRegister ?? false);
 }
 <div class="auth-wrap">
-    <div class="card auth-card @(showRegister ? "show-reg" : "show-login")" id="authCard">
+    <div class="card auth-card" id="authCard">
         <div class="tabs">
             <button type="button" data-tab="login" class="@(!showRegister ? "on" : null)">Log in</button>
             <button type="button" data-tab="register" class="@(showRegister ? "on" : null)">Register</button>
@@ -22,12 +22,13 @@
             <label>Email <input name="Email" type="email" required value="@form.Email" /></label>
             <label>Password <input name="Password" type="password" required /></label>
             <button class="btn primary" type="submit">Log in</button>
+            <p style="text-align:center;margin:8px 0 0"><a href="/Home/ForgotPassword">Forgot password?</a></p>
         </form>
 
         <!-- Register -->
         <form method="post" action="/Home/Register" class="pane register @(!showRegister ? "hide" : null)">
             @Html.AntiForgeryToken()
-            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            <div asp-validation-summary="All" class="validation-summary"></div>
             <label>Full name <input name="FullName" required value="@reg.FullName" /></label>
             <label>Email <input name="Email" type="email" required value="@reg.Email" /></label>
             <label>Password <input name="Password" type="password" required minlength="6" /></label>
@@ -37,15 +38,15 @@
 </div>
 
 <script>
-    document.querySelectorAll('.tabs [data-tab]').forEach(b => {
-        b.addEventListener('click', () => {
-            const card = document.getElementById('authCard');
-            const tab = b.dataset.tab;
-            card.classList.toggle('show-reg', tab === 'register');
-            card.classList.toggle('show-login', tab === 'login');
-            card.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    (function () {
+        const card = document.getElementById('authCard');
+        const initialTab = '@(showRegister ? "register" : "login")';
+        function show(tab) {
+            card.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
             card.querySelectorAll('.pane').forEach(p => p.classList.add('hide'));
-            card.querySelector('.' + tab).classList.remove('hide');
-        });
-    });
+            card.querySelector('.pane.' + tab).classList.remove('hide');
+        }
+        card.querySelectorAll('.tabs [data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
+        show(initialTab);
+    })();
 </script>
